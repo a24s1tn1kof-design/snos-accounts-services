@@ -34,7 +34,10 @@ body {
   padding:8px 14px; border-radius:20px;
   font-size:12px; color:#aaa; letter-spacing:.5px;
   font-family:"SF Mono",Menlo,monospace;
+  cursor:pointer;
+  transition:border-color .2s;
 }
+.snos-counter:hover { border-color:#555; }
 .snos-counter b { color:#fff; font-weight:700; }
 
 .premium-btn {
@@ -256,7 +259,7 @@ body {
   min-height:16px;
 }
 
-/* ---------- Анимированная оплата (пункт 29) ---------- */
+/* ---------- Анимированная оплата ---------- */
 .pay-steps {
   display:flex; flex-direction:column; gap:14px;
   width:100%;
@@ -308,7 +311,6 @@ body {
   font-family:"SF Mono",Menlo,monospace;
   letter-spacing:.5px;
 }
-
 .pay-progress {
   width:100%; height:3px;
   background:#111;
@@ -323,7 +325,7 @@ body {
   transition:width .4s linear;
 }
 
-/* ---------- Чек об оплате (пункт 30) ---------- */
+/* ---------- Чек ---------- */
 .receipt {
   width:100%;
   display:flex; flex-direction:column; gap:12px;
@@ -398,6 +400,96 @@ body {
   background:#0a0a0a; color:#aaa;
   border:1px solid #222 !important;
 }
+
+/* ---------- Модалка баланса ---------- */
+.modal-overlay {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:100;
+  padding:24px;
+  animation:fadeInModal .2s ease-out;
+}
+.modal-overlay.active { display:flex; }
+@keyframes fadeInModal { from { opacity:0; } to { opacity:1; } }
+.modal-card {
+  width:100%; max-width:340px;
+  background:#0a0a0a;
+  border:1px solid #222;
+  border-radius:18px;
+  padding:24px;
+  display:flex; flex-direction:column; gap:16px;
+  animation:popModal .25s ease-out;
+}
+@keyframes popModal {
+  from { transform:scale(.92); opacity:0; }
+  to   { transform:scale(1);   opacity:1; }
+}
+.modal-title {
+  font-size:12px; color:#666;
+  letter-spacing:2px; text-transform:uppercase;
+  text-align:center;
+  font-family:"SF Mono",Menlo,monospace;
+}
+.modal-balance {
+  display:flex; align-items:baseline; justify-content:center;
+  gap:8px;
+}
+.modal-balance span:first-child {
+  font-size:44px; font-weight:800;
+  font-family:"SF Mono",Menlo,monospace;
+  color:#fff;
+  line-height:1;
+}
+.modal-balance-label {
+  font-size:16px; color:#888;
+  font-family:"SF Mono",Menlo,monospace;
+}
+.modal-sub {
+  text-align:center;
+  font-size:12px; color:#555;
+  font-family:"SF Mono",Menlo,monospace;
+  margin-top:-6px;
+}
+.modal-actions {
+  display:flex; flex-direction:column; gap:10px;
+  margin-top:6px;
+}
+.modal-btn {
+  padding:14px;
+  border-radius:12px;
+  font-size:14px; font-weight:700;
+  cursor:pointer;
+  border:none;
+  letter-spacing:.5px;
+  transition:opacity .2s, transform .1s;
+}
+.modal-btn:hover { opacity:.85; }
+.modal-btn:active { transform:scale(.98); }
+.modal-btn-secondary {
+  background:#fff; color:#000;
+}
+.modal-btn-danger {
+  background:rgba(248,113,113,.1);
+  color:#f87171;
+  border:1px solid rgba(248,113,113,.35);
+}
+.modal-btn-danger:hover {
+  background:rgba(248,113,113,.18);
+}
+.modal-close {
+  background:none; border:none;
+  color:#555;
+  font-size:13px;
+  cursor:pointer;
+  padding:8px;
+  letter-spacing:.5px;
+  font-family:"SF Mono",Menlo,monospace;
+}
+.modal-close:hover { color:#fff; }
 </style>
 </head>
 <body>
@@ -469,7 +561,7 @@ body {
   </div>
 </div>
 
-<!-- Оплата (ввод карты) -->
+<!-- Оплата -->
 <div class="screen" id="screen-pay">
   <button class="back-btn" id="pay-back">← Назад</button>
   <h2 class="screen-title" id="pay-title">Оплата</h2>
@@ -493,7 +585,7 @@ body {
   </div>
 </div>
 
-<!-- Анимированная оплата (пункт 29) -->
+<!-- Анимированная оплата -->
 <div class="screen" id="screen-pay-progress">
   <h2 class="screen-title">Обработка платежа</h2>
   <div class="pay-steps" id="pay-steps">
@@ -517,7 +609,7 @@ body {
   </div>
 </div>
 
-<!-- Чек об оплате (пункт 30) -->
+<!-- Чек -->
 <div class="screen" id="screen-receipt">
   <div class="receipt" id="receipt-content"></div>
 </div>
@@ -525,7 +617,7 @@ body {
 <!-- HUD -->
 <div class="hud">
   <div class="hud-left">
-    <div class="snos-counter">Доступно <b id="snos-count">3</b> snosa</div>
+    <div class="snos-counter" id="snos-counter">Доступно <b id="snos-count">3</b> snosa</div>
   </div>
   <div class="hud-right">
     <div class="premium-btn" id="premium-btn" title="Premium">
@@ -535,7 +627,24 @@ body {
     </div>
   </div>
 </div>
-  <script>
+
+<!-- Модалка баланса -->
+<div class="modal-overlay" id="balance-modal">
+  <div class="modal-card">
+    <div class="modal-title">Баланс</div>
+    <div class="modal-balance">
+      <span id="modal-balance-num">3</span>
+      <span class="modal-balance-label">Snos</span>
+    </div>
+    <div class="modal-sub" id="modal-balance-sub">Доступно для операций</div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-secondary" id="modal-topup">Пополнить</button>
+      <button class="modal-btn modal-btn-danger" id="modal-reset">Обнулить snos</button>
+    </div>
+    <button class="modal-close" id="modal-close">Закрыть</button>
+  </div>
+</div>
+      <script>
 const screens = {
   main:         document.getElementById('screen-main'),
   input:        document.getElementById('screen-input'),
@@ -547,23 +656,53 @@ const screens = {
   receipt:      document.getElementById('screen-receipt'),
 };
 
-const inputTitle     = document.getElementById('input-title');
-const targetInput    = document.getElementById('target-input');
-const snosBtn        = document.getElementById('snos-btn');
-const loaderText     = document.getElementById('loader-text');
-const processStatus  = document.getElementById('process-status');
-const finalScreen    = document.getElementById('final-screen');
-const snosCountEl    = document.getElementById('snos-count');
-const payTitle       = document.getElementById('pay-title');
-const payError       = document.getElementById('pay-error');
-const receiptContent = document.getElementById('receipt-content');
-const payStepsEl     = document.getElementById('pay-steps');
-const payProgressFill= document.getElementById('pay-progress-fill');
+const inputTitle      = document.getElementById('input-title');
+const targetInput     = document.getElementById('target-input');
+const snosBtn         = document.getElementById('snos-btn');
+const loaderText      = document.getElementById('loader-text');
+const processStatus   = document.getElementById('process-status');
+const finalScreen     = document.getElementById('final-screen');
+const snosCountEl     = document.getElementById('snos-count');
+const payTitle        = document.getElementById('pay-title');
+const payError        = document.getElementById('pay-error');
+const receiptContent  = document.getElementById('receipt-content');
+const payStepsEl      = document.getElementById('pay-steps');
+const payProgressFill = document.getElementById('pay-progress-fill');
 
 let currentPlatform = null;
-let snosBalance = 3;
 let timers = [];
 let selectedTariff = null;
+
+/* ---------- Сохранение ---------- */
+const STORAGE_KEY = 'snoser_state_v1';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { balance: 3, history: [], purchases: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      balance:   typeof parsed.balance === 'number' ? parsed.balance : 3,
+      history:   Array.isArray(parsed.history)   ? parsed.history   : [],
+      purchases: Array.isArray(parsed.purchases) ? parsed.purchases : [],
+    };
+  } catch (e) {
+    return { balance: 3, history: [], purchases: [] };
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      balance:   snosBalance,
+      history:   state.history,
+      purchases: state.purchases,
+    }));
+  } catch (e) { /* ignore */ }
+}
+
+const state = loadState();
+let snosBalance = state.balance;
 
 const SEARCH_MS = 30000;
 const STEP_MS   = 20000;
@@ -657,7 +796,13 @@ function clearTimers() {
   timers.forEach(t => { clearTimeout(t); clearInterval(t); });
   timers = [];
 }
-function updateSnosUI() { snosCountEl.textContent = snosBalance; }
+
+function updateSnosUI() {
+  snosCountEl.textContent = snosBalance;
+  const modalNum = document.getElementById('modal-balance-num');
+  if (modalNum) modalNum.textContent = snosBalance;
+  saveState();
+}
 
 function resetApp() {
   clearTimers();
@@ -671,6 +816,7 @@ function resetApp() {
   document.getElementById('card-cvv').value = '';
   document.getElementById('pay-submit').disabled = false;
   document.getElementById('pay-submit').textContent = 'Оплатить';
+  document.getElementById('balance-modal').classList.remove('active');
 }
 
 /* ---------- Навигация ---------- */
@@ -692,6 +838,35 @@ document.getElementById('back-to-main').addEventListener('click', () => {
 document.getElementById('premium-btn').addEventListener('click', () => showScreen('tariffs'));
 document.getElementById('tariffs-back').addEventListener('click', () => showScreen('main'));
 document.getElementById('pay-back').addEventListener('click', () => showScreen('tariffs'));
+
+/* ---------- Модалка баланса ---------- */
+const balanceModal = document.getElementById('balance-modal');
+
+document.getElementById('snos-counter').addEventListener('click', () => {
+  document.getElementById('modal-balance-num').textContent = snosBalance;
+  document.getElementById('modal-balance-sub').textContent =
+    snosBalance > 0 ? 'Доступно для операций' : 'Баланс пуст. Пополните или обнулите.';
+  balanceModal.classList.add('active');
+});
+
+document.getElementById('modal-close').addEventListener('click', () => {
+  balanceModal.classList.remove('active');
+});
+
+balanceModal.addEventListener('click', e => {
+  if (e.target === balanceModal) balanceModal.classList.remove('active');
+});
+
+document.getElementById('modal-topup').addEventListener('click', () => {
+  balanceModal.classList.remove('active');
+  showScreen('tariffs');
+});
+
+document.getElementById('modal-reset').addEventListener('click', () => {
+  snosBalance = 0;
+  updateSnosUI();
+  balanceModal.classList.remove('active');
+});
 
 /* ---------- Тарифы ---------- */
 document.querySelectorAll('.tariff-card').forEach(card => {
@@ -740,10 +915,8 @@ function nowStamp() {
   const p = n => String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
-
-/* ---------- Пункт 29: анимированная оплата ---------- */
+        /* ---------- Анимированная оплата ---------- */
 function startPaymentAnimation(cardLast4) {
-  // Сброс шагов
   const steps = payStepsEl.querySelectorAll('.pay-step');
   steps.forEach(s => {
     s.classList.remove('active','done');
@@ -753,35 +926,40 @@ function startPaymentAnimation(cardLast4) {
   });
   payProgressFill.style.width = '0%';
 
-  const stepDurations = [1100, 1100, 1400, 1400]; // ~5 сек суммарно
+  const stepDurations = [1100, 1100, 1400, 1400];
+  const totalDuration = stepDurations.reduce((a,b)=>a+b,0);
   let totalElapsed = 0;
   let cumulative = 0;
 
   steps.forEach((step, i) => {
     const t = setTimeout(() => {
-      // предыдущие — done
       steps.forEach((s, j) => {
         if (j < i) { s.classList.remove('active'); s.classList.add('done'); }
         if (j === i) { s.classList.remove('done'); s.classList.add('active'); }
       });
       cumulative += stepDurations[i];
-      const pct = Math.min(100, Math.round((cumulative / stepDurations.reduce((a,b)=>a+b,0)) * 100));
+      const pct = Math.min(100, Math.round((cumulative / totalDuration) * 100));
       payProgressFill.style.width = pct + '%';
     }, totalElapsed);
     timers.push(t);
     totalElapsed += stepDurations[i];
   });
 
-  // Финальный шаг — done
   const fin = setTimeout(() => {
     steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
     payProgressFill.style.width = '100%';
     const icon = steps[steps.length - 1].querySelector('.pay-step-icon');
     icon.textContent = '✓';
 
-    // начисляем и показываем чек
     snosBalance += selectedTariff.amount;
     updateSnosUI();
+
+    state.purchases.push({
+      amount: selectedTariff.amount,
+      price:  selectedTariff.price,
+      time:   nowStamp(),
+    });
+    saveState();
 
     timers.push(setTimeout(() => {
       renderReceipt(cardLast4);
@@ -791,7 +969,7 @@ function startPaymentAnimation(cardLast4) {
   timers.push(fin);
 }
 
-/* ---------- Пункт 30: чек об оплате ---------- */
+/* ---------- Чек ---------- */
 function renderReceipt(cardLast4) {
   const txId = 'TXN-' + randHex(8).toUpperCase();
   const authCode = randHex(6).toUpperCase();
@@ -947,6 +1125,16 @@ function renderFinalScreen(platform, target, isFail) {
     `;
   }
 
+  // Сохраняем в историю
+  state.history.push({
+    platform,
+    target,
+    caseId,
+    status: isFail ? 'REJECTED' : 'SUCCESS',
+    time: startedAt,
+  });
+  saveState();
+
   document.getElementById('final-home').addEventListener('click', () => {
     resetApp();
     showScreen('main');
@@ -992,4 +1180,4 @@ snosBtn.addEventListener('click', () => {
 updateSnosUI();
 </script>
 </body>
-  </html>
+</html>
