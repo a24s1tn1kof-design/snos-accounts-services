@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snoser</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+html, body { height:100%; }
+body {
+  background:#000; color:#fff; overflow:hidden;
+  display:flex; justify-content:center; align-items:center;
+}
+.screen {
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; max-width:420px; height:100vh; max-height:100vh;
+  padding:24px; overflow:hidden;
+}
+.screen.active { display:flex; }
+
+.logo {
+  font-size:48px; font-weight:800; letter-spacing:2px; margin-bottom:8px;
+  background:linear-gradient(90deg,#fff,#888);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+}
+.subtitle {
+  color:#666; margin-bottom:40px; font-size:14px;
+  letter-spacing:1px; text-transform:uppercase;
+}
+.platforms { display:flex; flex-direction:column; gap:14px; width:100%; }
+.platform-btn {
+  background:#0a0a0a; border:1px solid #222; color:#fff;
+  padding:18px; border-radius:12px; font-size:16px; font-weight:600;
+  cursor:pointer; transition:all .2s;
+}
+.platform-btn:hover { background:#111; border-color:#444; }
+.platform-btn:active { transform:scale(.98); }
+
+.back-btn {
+  align-self:flex-start; background:none; border:none; color:#666;
+  font-size:14px; cursor:pointer; margin-bottom:24px; padding:8px 0;
+}
+.back-btn:hover { color:#fff; }
+.screen-title { font-size:20px; margin-bottom:24px; font-weight:600; text-align:center; }
+.target-input {
+  width:100%; background:#0a0a0a; border:1px solid #222; color:#fff;
+  padding:16px; border-radius:12px; font-size:16px; outline:none;
+  margin-bottom:16px; transition:border-color .2s;
+}
+.target-input:focus { border-color:#555; }
+.snos-btn {
+  width:100%; background:#fff; color:#000; border:none;
+  padding:16px; border-radius:12px; font-size:16px; font-weight:700;
+  cursor:pointer; letter-spacing:1px; transition:opacity .2s;
+}
+.snos-btn:hover { opacity:.85; }
+.snos-btn:active { transform:scale(.98); }
+
+.log-box {
+  width:100%; background:#0a0a0a; border:1px solid #1a1a1a;
+  border-radius:12px; padding:20px;
+  height:340px; overflow-y:auto;
+  display:flex; flex-direction:column; gap:10px;
+  font-family:"SF Mono",Menlo,monospace; font-size:13px;
+  margin-bottom:20px;
+}
+.log-box::-webkit-scrollbar { width:4px; }
+.log-box::-webkit-scrollbar-thumb { background:#222; border-radius:2px; }
+
+.log-line { color:#888; opacity:0; animation:fadeIn .35s forwards; }
+.log-line.success { color:#4ade80; }
+.log-line.fail    { color:#f87171; }
+.log-line.process { color:#facc15; }
+
+@keyframes fadeIn { to { opacity:1; } }
+
+.home-btn {
+  width:100%; background:#fff; color:#000; border:none;
+  padding:16px; border-radius:12px; font-size:16px; font-weight:700;
+  cursor:pointer;
+}
+.home-btn:hover { opacity:.85; }
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="screen active" id="screen-main">
+  <h1 class="logo">Snoser</h1>
+  <p class="subtitle">Выберите платформу</p>
+  <div class="platforms">
+    <button class="platform-btn" data-platform="telegram">Telegram</button>
+    <button class="platform-btn" data-platform="whatsapp">WhatsApp</button>
+    <button class="platform-btn" data-platform="max">Max</button>
+    <button class="platform-btn" data-platform="site">Сайт https://</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-input">
+  <button class="back-btn" id="back-to-main">← Назад</button>
+  <h2 class="screen-title" id="input-title">Введите данные</h2>
+  <input type="text" id="target-input" class="target-input" autocomplete="off">
+  <button class="snos-btn" id="snos-btn">Snos</button>
+</div>
+
+<div class="screen" id="screen-log">
+  <div class="log-box" id="log-box"></div>
+  <button class="home-btn hidden" id="home-btn">На главный экран</button>
+</div>
+
+<script>
+const screens = {
+  main:  document.getElementById('screen-main'),
+  input: document.getElementById('screen-input'),
+  log:   document.getElementById('screen-log'),
+};
+const inputTitle  = document.getElementById('input-title');
+const targetInput = document.getElementById('target-input');
+const snosBtn     = document.getElementById('snos-btn');
+const logBox      = document.getElementById('log-box');
+const homeBtn     = document.getElementById('home-btn');
+
+let currentPlatform = null;
+let timers = [];
+
+// Общая "длинная" стадия поиска — 60–120 секунд
+function randomSearchDuration() {
+  return 60000 + Math.floor(Math.random() * 60000);
+}
+
+const PLATFORM_CONFIG = {
+  telegram: {
+    title: 'Введите @username',
+    placeholder: '@username',
+    steps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отправлены', type: 'success' },
+      { text: 'Аккаунт удален',    type: 'success' },
+    ],
+    failSteps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отклонены',  type: 'fail'  },
+    ],
+  },
+  whatsapp: {
+    title: 'Введите номер телефона',
+    placeholder: '+7 999 000-00-00',
+    steps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отправлены', type: 'success' },
+      { text: 'Аккаунт удален',    type: 'success' },
+    ],
+    failSteps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отклонены',  type: 'fail'  },
+    ],
+  },
+  max: {
+    title: 'Введите @username',
+    placeholder: '@username',
+    steps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отправлены', type: 'success' },
+      { text: 'Аккаунт удален',    type: 'success' },
+    ],
+    failSteps: [
+      { text: 'Поиск данных',      type: 'process' },
+      { text: 'Данные найдены',    type: 'success' },
+      { text: 'Отправка жалоб',    type: 'process' },
+      { text: 'Жалобы отклонены',  type: 'fail'  },
+    ],
+  },
+  site: {
+    title: 'Введите ссылку на сайт',
+    placeholder: 'https://example.com',
+    steps: [
+      { text: 'Поиск данных сайта',              type: 'process' },
+      { text: 'Сайт найден',                     type: 'success' },
+      { text: 'Поиск уязвимости',                type: 'process' },
+      { text: 'Уязвимость найдена',              type: 'success' },
+      { text: 'Удаление сайта через уязвимость', type: 'process' },
+      { text: 'Сайт удален',                     type: 'success' },
+    ],
+    failSteps: [
+      { text: 'Поиск данных сайта',            type: 'process' },
+      { text: 'Сайт найден',                   type: 'success' },
+      { text: 'Поиск уязвимости',              type: 'process' },
+      { text: 'Уязвимость не найдена',         type: 'fail'  },
+      { text: 'Поиск альтернативного способа', type: 'process' },
+      { text: 'Способ найден',                 type: 'success' },
+      { text: 'Сайт удален',                   type: 'success' },
+    ],
+  },
+};
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+function clearTimers() {
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+}
+
+function addLog(text, type = '') {
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = '> ' + text;
+  logBox.appendChild(line);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function resetApp() {
+  clearTimers();
+  logBox.innerHTML = '';
+  homeBtn.classList.add('hidden');
+  targetInput.value = '';
+  currentPlatform = null;
+}
+
+document.querySelectorAll('.platform-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentPlatform = btn.dataset.platform;
+    const cfg = PLATFORM_CONFIG[currentPlatform];
+    inputTitle.textContent = cfg.title;
+    targetInput.placeholder = cfg.placeholder;
+    targetInput.value = '';
+    showScreen('input');
+    targetInput.focus();
+  });
+});
+
+document.getElementById('back-to-main').addEventListener('click', () => {
+  showScreen('main');
+  targetInput.value = '';
+});
+
+snosBtn.addEventListener('click', () => {
+  const value = targetInput.value.trim();
+  if (!value) { targetInput.focus(); return; }
+
+  const cfg = PLATFORM_CONFIG[currentPlatform];
+  const isFail = Math.random() < 0.25;
+  const steps = isFail ? cfg.failSteps : cfg.steps;
+
+  logBox.innerHTML = '';
+  homeBtn.classList.add('hidden');
+  showScreen('log');
+  clearTimers();
+
+  // Первый шаг (поиск) — тянется 1–2 минуты
+  const searchDuration = randomSearchDuration();
+  const searchText = steps[0].text;
+  const searchType = steps[0].type;
+
+  // Показываем первый шаг сразу, но с анимированным многоточием
+  const searchLine = document.createElement('div');
+  searchLine.className = 'log-line ' + searchType;
+  searchLine.textContent = '> ' + searchText;
+  logBox.appendChild(searchLine);
+
+  let dots = 0;
+  const dotsTimer = setInterval(() => {
+    dots = (dots + 1) % 4;
+    searchLine.textContent = '> ' + searchText + '.'.repeat(dots);
+  }, 700);
+  timers.push(dotsTimer);
+
+  let offset = searchDuration;
+
+  // Завершение первого шага
+  const t0 = setTimeout(() => {
+    clearInterval(dotsTimer);
+    searchLine.textContent = '> ' + searchText + ' — готово';
+    searchLine.classList.remove('process');
+    searchLine.classList.add('success');
+
+    // Остальные шаги — по 1.2 сек
+    for (let i = 1; i < steps.length; i++) {
+      const t = setTimeout(() => {
+        addLog(steps[i].text, steps[i].type);
+        if (i === steps.length - 1) {
+          homeBtn.classList.remove('hidden');
+        }
+      }, (i - 1) * 1200);
+      timers.push(t);
+    }
+  }, offset);
+  timers.push(t0);
+});
+
+homeBtn.addEventListener('click', () => {
+  resetApp();
+  showScreen('main');
+});
+</script>
+</body>
+  </html>
