@@ -14,18 +14,20 @@ body {
 .screen {
   display:none; flex-direction:column; align-items:center; justify-content:center;
   width:100%; max-width:420px; height:100vh; max-height:100vh;
-  padding:24px; overflow:hidden; position:relative;
+  padding:24px; padding-bottom:90px;
+  overflow:hidden; overflow-x:hidden; position:relative;
 }
 .screen.active { display:flex; }
 
-/* ---------- HUD (снизу) ---------- */
+/* ---------- HUD ---------- */
 .hud {
   position:fixed; bottom:16px; left:0; right:0;
   max-width:420px; margin:0 auto;
   display:flex; justify-content:space-between; align-items:center;
   padding:0 24px; pointer-events:none;
-  z-index:50;
+  z-index:50; transition:opacity .25s, visibility .25s;
 }
+.hud.hidden { opacity:0; visibility:hidden; pointer-events:none; }
 .hud-left, .hud-right { pointer-events:auto; }
 .snos-counter {
   background:#0a0a0a; border:1px solid #222;
@@ -85,8 +87,9 @@ body {
 }
 .snos-btn:hover { opacity:.85; }
 .snos-btn:active { transform:scale(.98); }
+.snos-btn:disabled { opacity:.5; cursor:not-allowed; }
 
-/* ---------- Лоадер процесса ---------- */
+/* ---------- Лоадер ---------- */
 .process-wrap {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:24px; width:100%;
@@ -115,20 +118,15 @@ body {
   background:rgba(255,255,255,.03);
 }
 .loader-text {
-  position:relative;
-  z-index:2;
+  position:relative; z-index:2;
   text-align:center;
-  font-size:13px;
-  color:#ccc;
-  padding:0 20px;
-  line-height:1.4;
+  font-size:13px; color:#ccc;
+  padding:0 20px; line-height:1.4;
   font-family:"SF Mono",Menlo,monospace;
 }
 .process-status {
-  font-size:12px;
-  color:#555;
-  letter-spacing:2px;
-  text-transform:uppercase;
+  font-size:12px; color:#555;
+  letter-spacing:2px; text-transform:uppercase;
   font-family:"SF Mono",Menlo,monospace;
 }
 
@@ -197,7 +195,7 @@ body {
 .report-list li span:last-child { color:#4ade80; }
 
 .final-footer {
-  padding:16px 0 20px; flex-shrink:0;
+  padding:16px 0 24px; flex-shrink:0;
   border-top:1px solid #1a1a1a;
 }
 .final-home-btn {
@@ -229,12 +227,13 @@ body {
 }
 
 /* ---------- Оплата ---------- */
-.pay-form { width:100%; display:flex; flex-direction:column; gap:14px; }
+.pay-form { width:100%; display:flex; flex-direction:column; gap:14px; box-sizing:border-box; }
 .pay-field {
   background:#0a0a0a; border:1px solid #222;
   border-radius:12px; padding:14px 16px;
   display:flex; flex-direction:column; gap:6px;
   transition:border-color .2s;
+  box-sizing:border-box; min-width:0;
 }
 .pay-field:focus-within { border-color:#555; }
 .pay-field label {
@@ -247,35 +246,158 @@ body {
   font-size:15px; outline:none;
   font-family:"SF Mono",Menlo,monospace;
   letter-spacing:1px;
+  width:100%; min-width:0;
 }
-.pay-row { display:flex; gap:14px; }
-.pay-row .pay-field { flex:1; }
+.pay-row { display:flex; gap:12px; width:100%; }
+.pay-row .pay-field { flex:1; min-width:0; }
 .pay-error {
   color:#f87171; font-size:12px;
   font-family:"SF Mono",Menlo,monospace;
   min-height:16px;
 }
 
-/* ---------- Одобрение оплаты ---------- */
-.approve-wrap {
-  display:flex; flex-direction:column; align-items:center; gap:20px;
-  text-align:center;
+/* ---------- Анимированная оплата (пункт 29) ---------- */
+.pay-steps {
+  display:flex; flex-direction:column; gap:14px;
+  width:100%;
+  padding:0 4px;
 }
-.approve-icon {
+.pay-step {
+  display:flex; align-items:center; gap:14px;
+  padding:12px 14px;
+  background:#0a0a0a;
+  border:1px solid #1a1a1a;
+  border-radius:10px;
+  opacity:.35;
+  transition:all .35s;
+}
+.pay-step.active {
+  opacity:1;
+  border-color:#444;
+  background:#111;
+}
+.pay-step.done {
+  opacity:1;
+  border-color:rgba(74,222,128,.35);
+}
+.pay-step-icon {
+  width:26px; height:26px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:50%;
+  background:rgba(255,255,255,.05);
+  border:1px solid #222;
+  font-family:"SF Mono",Menlo,monospace;
+  font-size:11px;
+  color:#666;
+}
+.pay-step.active .pay-step-icon {
+  border-color:#fff;
+  animation:pulse 1s infinite;
+}
+.pay-step.done .pay-step-icon {
+  background:rgba(74,222,128,.15);
+  border-color:rgba(74,222,128,.5);
+  color:#4ade80;
+}
+@keyframes pulse {
+  0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,.4); }
+  50%     { transform:scale(1.08); box-shadow:0 0 0 6px rgba(255,255,255,0); }
+}
+.pay-step-text {
+  font-size:13px; color:#ddd;
+  font-family:"SF Mono",Menlo,monospace;
+  letter-spacing:.5px;
+}
+
+.pay-progress {
+  width:100%; height:3px;
+  background:#111;
+  border-radius:2px;
+  overflow:hidden;
+  margin-top:8px;
+}
+.pay-progress-fill {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#4ade80,#fff);
+  transition:width .4s linear;
+}
+
+/* ---------- Чек об оплате (пункт 30) ---------- */
+.receipt {
+  width:100%;
+  display:flex; flex-direction:column; gap:12px;
+  padding:0 4px;
+}
+.receipt-hero {
+  text-align:center;
+  padding:24px 0 20px;
+  border-bottom:1px dashed #1a1a1a;
+  margin-bottom:8px;
+}
+.receipt-check {
   width:72px; height:72px; border-radius:50%;
   background:rgba(74,222,128,.12);
   border:1px solid rgba(74,222,128,.4);
   display:flex; align-items:center; justify-content:center;
+  margin:0 auto 14px;
   animation:pop .4s ease-out;
 }
-.approve-icon svg { width:34px; height:34px; }
+.receipt-check svg { width:34px; height:34px; }
 @keyframes pop {
   0% { transform:scale(.5); opacity:0; }
   100% { transform:scale(1); opacity:1; }
 }
-.approve-title { font-size:20px; font-weight:700; color:#4ade80; }
-.approve-sub { font-size:13px; color:#888; font-family:"SF Mono",Menlo,monospace; }
-.approve-amount { font-size:24px; font-weight:800; font-family:"SF Mono",Menlo,monospace; }
+.receipt-title { font-size:20px; font-weight:700; color:#4ade80; margin-bottom:4px; }
+.receipt-amount {
+  font-size:28px; font-weight:800;
+  font-family:"SF Mono",Menlo,monospace;
+  margin-top:8px;
+}
+.receipt-status {
+  font-size:11px; color:#4ade80;
+  letter-spacing:1.5px; text-transform:uppercase;
+  margin-top:6px;
+  font-family:"SF Mono",Menlo,monospace;
+}
+.receipt-rows {
+  display:flex; flex-direction:column; gap:2px;
+  background:#0a0a0a;
+  border:1px solid #1a1a1a;
+  border-radius:10px;
+  padding:14px;
+}
+.receipt-row {
+  display:flex; justify-content:space-between;
+  padding:8px 0;
+  border-bottom:1px dashed #161616;
+  font-family:"SF Mono",Menlo,monospace;
+  font-size:12px;
+}
+.receipt-row:last-child { border-bottom:none; }
+.receipt-row span:first-child { color:#666; }
+.receipt-row span:last-child  { color:#ddd; }
+
+.receipt-actions {
+  display:flex; gap:10px;
+  margin-top:8px;
+}
+.receipt-actions button {
+  flex:1;
+  padding:14px;
+  border-radius:12px;
+  font-size:14px; font-weight:700;
+  cursor:pointer;
+  border:none;
+  letter-spacing:.5px;
+  transition:opacity .2s;
+}
+.receipt-actions button:hover { opacity:.85; }
+.btn-primary { background:#fff; color:#000; }
+.btn-secondary {
+  background:#0a0a0a; color:#aaa;
+  border:1px solid #222 !important;
+}
 </style>
 </head>
 <body>
@@ -347,7 +469,7 @@ body {
   </div>
 </div>
 
-<!-- Оплата -->
+<!-- Оплата (ввод карты) -->
 <div class="screen" id="screen-pay">
   <button class="back-btn" id="pay-back">← Назад</button>
   <h2 class="screen-title" id="pay-title">Оплата</h2>
@@ -371,18 +493,33 @@ body {
   </div>
 </div>
 
-<!-- Одобрение -->
-<div class="screen" id="screen-approve">
-  <div class="approve-wrap">
-    <div class="approve-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg>
+<!-- Анимированная оплата (пункт 29) -->
+<div class="screen" id="screen-pay-progress">
+  <h2 class="screen-title">Обработка платежа</h2>
+  <div class="pay-steps" id="pay-steps">
+    <div class="pay-step" data-step="0">
+      <div class="pay-step-icon">1</div>
+      <div class="pay-step-text">Связь с банком</div>
     </div>
-    <div class="approve-title">Оплата одобрена</div>
-    <div class="approve-amount" id="approve-amount">+10 Snos</div>
-    <div class="approve-sub" id="approve-sub">Баланс обновлён</div>
+    <div class="pay-step" data-step="1">
+      <div class="pay-step-icon">2</div>
+      <div class="pay-step-text">Проверка карты</div>
+    </div>
+    <div class="pay-step" data-step="2">
+      <div class="pay-step-icon">3</div>
+      <div class="pay-step-text">Списание средств</div>
+    </div>
+    <div class="pay-step" data-step="3">
+      <div class="pay-step-icon">4</div>
+      <div class="pay-step-text">Одобрено</div>
+    </div>
+    <div class="pay-progress"><div class="pay-progress-fill" id="pay-progress-fill"></div></div>
   </div>
+</div>
+
+<!-- Чек об оплате (пункт 30) -->
+<div class="screen" id="screen-receipt">
+  <div class="receipt" id="receipt-content"></div>
 </div>
 
 <!-- HUD -->
@@ -398,15 +535,16 @@ body {
     </div>
   </div>
 </div>
-   <script>
+  <script>
 const screens = {
-  main:     document.getElementById('screen-main'),
-  input:    document.getElementById('screen-input'),
-  process:  document.getElementById('screen-process'),
-  final:    document.getElementById('screen-final'),
-  tariffs:  document.getElementById('screen-tariffs'),
-  pay:      document.getElementById('screen-pay'),
-  approve:  document.getElementById('screen-approve'),
+  main:         document.getElementById('screen-main'),
+  input:        document.getElementById('screen-input'),
+  process:      document.getElementById('screen-process'),
+  final:        document.getElementById('screen-final'),
+  tariffs:      document.getElementById('screen-tariffs'),
+  pay:          document.getElementById('screen-pay'),
+  payProgress:  document.getElementById('screen-pay-progress'),
+  receipt:      document.getElementById('screen-receipt'),
 };
 
 const inputTitle     = document.getElementById('input-title');
@@ -418,8 +556,9 @@ const finalScreen    = document.getElementById('final-screen');
 const snosCountEl    = document.getElementById('snos-count');
 const payTitle       = document.getElementById('pay-title');
 const payError       = document.getElementById('pay-error');
-const approveAmount  = document.getElementById('approve-amount');
-const approveSub     = document.getElementById('approve-sub');
+const receiptContent = document.getElementById('receipt-content');
+const payStepsEl     = document.getElementById('pay-steps');
+const payProgressFill= document.getElementById('pay-progress-fill');
 
 let currentPlatform = null;
 let snosBalance = 3;
@@ -507,7 +646,13 @@ const PLATFORM_CONFIG = {
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   screens[name].classList.add('active');
+
+  const hud = document.querySelector('.hud');
+  const showHudOn = ['main', 'input', 'tariffs', 'pay'];
+  if (showHudOn.includes(name)) hud.classList.remove('hidden');
+  else hud.classList.add('hidden');
 }
+
 function clearTimers() {
   timers.forEach(t => { clearTimeout(t); clearInterval(t); });
   timers = [];
@@ -517,12 +662,15 @@ function updateSnosUI() { snosCountEl.textContent = snosBalance; }
 function resetApp() {
   clearTimers();
   finalScreen.innerHTML = '';
+  receiptContent.innerHTML = '';
   targetInput.value = '';
   currentPlatform = null;
   payError.textContent = '';
   document.getElementById('card-num').value = '';
   document.getElementById('card-exp').value = '';
   document.getElementById('card-cvv').value = '';
+  document.getElementById('pay-submit').disabled = false;
+  document.getElementById('pay-submit').textContent = 'Оплатить';
 }
 
 /* ---------- Навигация ---------- */
@@ -579,6 +727,116 @@ cardCvvInput.addEventListener('input', e => {
   e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3);
 });
 
+/* ---------- Утилиты ---------- */
+function randHex(len) {
+  const c = '0123456789abcdef';
+  let s = '';
+  for (let i = 0; i < len; i++) s += c[Math.floor(Math.random()*16)];
+  return s;
+}
+function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
+function nowStamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ---------- Пункт 29: анимированная оплата ---------- */
+function startPaymentAnimation(cardLast4) {
+  // Сброс шагов
+  const steps = payStepsEl.querySelectorAll('.pay-step');
+  steps.forEach(s => {
+    s.classList.remove('active','done');
+    const icon = s.querySelector('.pay-step-icon');
+    icon.textContent = s.dataset.step === '3' ? '✓' :
+                       String(parseInt(s.dataset.step, 10) + 1);
+  });
+  payProgressFill.style.width = '0%';
+
+  const stepDurations = [1100, 1100, 1400, 1400]; // ~5 сек суммарно
+  let totalElapsed = 0;
+  let cumulative = 0;
+
+  steps.forEach((step, i) => {
+    const t = setTimeout(() => {
+      // предыдущие — done
+      steps.forEach((s, j) => {
+        if (j < i) { s.classList.remove('active'); s.classList.add('done'); }
+        if (j === i) { s.classList.remove('done'); s.classList.add('active'); }
+      });
+      cumulative += stepDurations[i];
+      const pct = Math.min(100, Math.round((cumulative / stepDurations.reduce((a,b)=>a+b,0)) * 100));
+      payProgressFill.style.width = pct + '%';
+    }, totalElapsed);
+    timers.push(t);
+    totalElapsed += stepDurations[i];
+  });
+
+  // Финальный шаг — done
+  const fin = setTimeout(() => {
+    steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    payProgressFill.style.width = '100%';
+    const icon = steps[steps.length - 1].querySelector('.pay-step-icon');
+    icon.textContent = '✓';
+
+    // начисляем и показываем чек
+    snosBalance += selectedTariff.amount;
+    updateSnosUI();
+
+    timers.push(setTimeout(() => {
+      renderReceipt(cardLast4);
+      showScreen('receipt');
+    }, 700));
+  }, totalElapsed);
+  timers.push(fin);
+}
+
+/* ---------- Пункт 30: чек об оплате ---------- */
+function renderReceipt(cardLast4) {
+  const txId = 'TXN-' + randHex(8).toUpperCase();
+  const authCode = randHex(6).toUpperCase();
+  const time = nowStamp();
+  const bank = ['SBERBANK','TINKOFF','ALFABANK','VTB','GAZPROMBANK'][randInt(0,4)];
+
+  receiptContent.innerHTML = `
+    <div class="receipt-hero">
+      <div class="receipt-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div class="receipt-title">Оплата прошла</div>
+      <div class="receipt-amount">+${selectedTariff.amount} Snos</div>
+      <div class="receipt-status">Успешно · ${selectedTariff.price} ₽</div>
+    </div>
+
+    <div class="receipt-rows">
+      <div class="receipt-row"><span>ID транзакции</span><span>${txId}</span></div>
+      <div class="receipt-row"><span>Код авторизации</span><span>${authCode}</span></div>
+      <div class="receipt-row"><span>Банк</span><span>${bank}</span></div>
+      <div class="receipt-row"><span>Карта</span><span>•••• •••• •••• ${cardLast4}</span></div>
+      <div class="receipt-row"><span>Сумма</span><span>${selectedTariff.price} ₽</span></div>
+      <div class="receipt-row"><span>Зачислено</span><span>${selectedTariff.amount} Snos</span></div>
+      <div class="receipt-row"><span>Баланс</span><span>${snosBalance} Snos</span></div>
+      <div class="receipt-row"><span>Время</span><span>${time}</span></div>
+      <div class="receipt-row"><span>Статус</span><span style="color:#4ade80;">COMPLETED</span></div>
+    </div>
+
+    <div class="receipt-actions">
+      <button class="btn-secondary" id="receipt-close">Закрыть</button>
+      <button class="btn-primary" id="receipt-home">На главный экран</button>
+    </div>
+  `;
+
+  document.getElementById('receipt-close').addEventListener('click', () => {
+    showScreen('tariffs');
+  });
+  document.getElementById('receipt-home').addEventListener('click', () => {
+    resetApp();
+    showScreen('main');
+  });
+}
+
 /* ---------- Оплата ---------- */
 document.getElementById('pay-submit').addEventListener('click', () => {
   const num = cardNumInput.value.replace(/\s/g, '');
@@ -595,39 +853,18 @@ document.getElementById('pay-submit').addEventListener('click', () => {
   if (mm < 1 || mm > 12) { payError.textContent = 'Неверный месяц'; return; }
   if (cvv.length !== 3) { payError.textContent = 'Введите CVV'; return; }
 
+  const cardLast4 = num.slice(-4);
+
   const submitBtn = document.getElementById('pay-submit');
   submitBtn.disabled = true;
   submitBtn.textContent = 'Обработка...';
 
-  timers.push(setTimeout(() => {
-    snosBalance += selectedTariff.amount;
-    updateSnosUI();
-    approveAmount.textContent = '+' + selectedTariff.amount + ' Snos';
-    approveSub.textContent = 'Баланс: ' + snosBalance + ' Snos';
-    showScreen('approve');
-
-    timers.push(setTimeout(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Оплатить';
-      showScreen('main');
-    }, 2500));
-  }, 5000));
+  showScreen('payProgress');
+  clearTimers();
+  startPaymentAnimation(cardLast4);
 });
 
-/* ---------- Утилиты финального экрана ---------- */
-function randHex(len) {
-  const c = '0123456789abcdef';
-  let s = '';
-  for (let i = 0; i < len; i++) s += c[Math.floor(Math.random()*16)];
-  return s;
-}
-function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
-function nowStamp() {
-  const d = new Date();
-  const p = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
+/* ---------- Финальный экран сноса ---------- */
 const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 const ICON_CROSS = `<svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
@@ -716,7 +953,7 @@ function renderFinalScreen(platform, target, isFail) {
   });
 }
 
-/* ---------- Запуск процесса ---------- */
+/* ---------- Запуск сноса ---------- */
 snosBtn.addEventListener('click', () => {
   const value = targetInput.value.trim();
   if (!value) { targetInput.focus(); return; }
@@ -755,4 +992,4 @@ snosBtn.addEventListener('click', () => {
 updateSnosUI();
 </script>
 </body>
-        </html>                                                                  
+  </html>
